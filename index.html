@@ -33,26 +33,33 @@
         <meta property="og:locale" content="en_US" /> <!-- default: "en_US" -->
     </head>
     <body>
-        <div id="game-info">
+        <!-- Верхняя панель с информацией о текущей игре (видна всегда) -->
+        <div id="info">
             <div id="info-scores">ОЧКИ: <span></span></div>
             <div id="info-timer">ТАЙМЕР: <span></span></div>
-            <div id="info-best-result">РЕКОРД: <span></span></div>
-        </div>
+            <div id="info-best">РЕКОРД: <span></span></div>
+        </div> 
 
-        <div id="start-menu">
+        <!-- Стартовый блок с названием и правилами игры (виден перед стартом игры)-->
+        <div id="menu">
             <h1><span></span></h1>
             <p>
-                Вам даётся <span></span> секунд, чтобы успеть набрать максимум очков, кликая по цветному квадрату.
+                Вам даётся <span></span> секунд, чтобы успеть набрать
+                максимум очков, кликая по цветному квадрату.
                 <h3>Кликните по экрату для старта игры</h3>
             </p>
             <h2>РЕКОРД: <span></span></h2>
         </div>
 
-        <div id="get-scores">+<span></span></div>
+        <!-- Игровая область (скрыта до старта игры)-->
+        <div id="game">
+            <!-- Всплывающий блок, указывающий число полученных очков, при клике по цели -->
+            <div id="scores"></div>
 
-        <div id="click-target"></div>
+            <!-- Блок, по которому нужно кликать, для получения очков -->
+            <div id="target"></div>
+        </div>
         
         <script src="./js/main.js"></script>
     </body>
 </html>
-
