@@ -1,193 +1,206 @@
 'use strict';
 
-// НАСТРОЙКИ ИГРЫ
+/************************
+ * 
+ *  НАСТРОЙКИ ИГРЫ
+ * 
+ */
+
 const GAME_NAME = 'КлИкЕр!'; /* название игры */
 const GAME_TIME = 30;  /* время игры (в секундах) */
-const TARGET_BLOCK_SIDE = 120; /* стороны блока (в пикселях) */
-const TARGET_AWAIT_START_TIME = 2; /* начальная скорость изменения положения блока (в секундах) */
-const TARGET_AWAIT_RANGE = 1.1; /* коэффициент уменьшения времени для смены положения при поподании */
+const TARGET_SIDE = 120; /* стороны блока (в пикселях) */
+const TARGET_REPLACE_TIME = 1; /* начальная скорость изменения положения блока (в секундах) */
 
-/* начисление очков за поподание */
+const TARGET_REPLACE_TIME_RANGE = 1.05;
 const START_SCORES = 100;
-const SCORES_RANGE = 1.2;
-let scoresSize;
+const SCORES_ADD_RANGE = 1.2;
 
 // очки и рекорд при старте игры
 let bestResult = 0;
 let scores = 0;
 
-/////////////////////////////////////
+let scoresAdd = START_SCORES;
 
-// ПОЛУЧЕНИЕ ЭЛЕМЕНТОВ СТРАНИЦЫ
+/*************************************
+ * 
+ *  ПОЛУЧЕНИЕ ЭЛЕМЕНТОВ СТРАНИЦЫ
+ * 
+ */
 
-// блок для клика
-const divTarget = document.getElementById('click-target');
-divTarget.onclick = getTargetClick;
+// Верхняя панель с информацией о текущей игре
+const divInfo = document.getElementById('info');
+const infoScores = document.getElementById('info-scores').querySelector('span');
+infoScores.innerHTML = scores; // указываем текущее число очкрв
+const infoTimer = document.getElementById('info-timer').querySelector('span');
+infoTimer.innerHTML = GAME_TIME; // указываем текущее время игры
+const infoBest = document.getElementById('info-best').querySelector('span');
+infoBest.innerHTML = bestResult; // указываем последний рекорд
 
-// блок, указывающий число полученных очков, при клике по цели
-const divGetScores = document.getElementById('get-scores');
-const divGetScoresSpan = divGetScores.querySelector('span');
 
-// верхняя понель с информацией о текущей игре (очки, таймер, рекорд)
-const divGameInfo = document.getElementById('game-info');
-const infoScoresSpan = document.getElementById('info-scores').querySelector('span');
-const infoTimerSpan = document.getElementById('info-timer').querySelector('span');
-const infoBestResultSpan = document.getElementById('info-best-result').querySelector('span');
+// Стартовый блок с названием и правилами игры, при клике - запускается игру
+const divMenu = document.getElementById('menu');
+divMenu.onclick = startGame; // слушатель события клика по блоку
+const menuTitle = divMenu.querySelector('h1').querySelector('span');
+menuTitle.innerHTML = GAME_NAME; // Добавляем заголовок игры
+const menuTimer = divMenu.querySelector('p').querySelector('span');
+menuTimer.innerHTML = GAME_TIME; // Добавляем время на игру
+const menuBest = divMenu.querySelector('h2').querySelector('span');
+menuBest.innerHTML = bestResult; // Добавляем лучший результат
 
-// блок с описанием игры, при клике - запускает игру
-const divStartMenu = document.getElementById('start-menu');
-divStartMenu.onclick = startGame;
-const titleStartMenuSpan = divStartMenu.querySelector('h1').querySelector('span');
-const descriptionStartMenuSpan = divStartMenu.querySelector('p').querySelector('span');
-const bestScoreStartMenuSpan = divStartMenu.querySelector('h2').querySelector('span');
+// Игровая область
+const divGame = document.getElementById('game');
 
-// обновление информации в блоке с описанием игры при загрузке страницы
-titleStartMenuSpan.innerHTML = GAME_NAME;
-descriptionStartMenuSpan.innerHTML = GAME_TIME;
-bestScoreStartMenuSpan.innerHTML = bestResult;
+// Блок, по которому нужно кликать, для получения очков
+const divTarget = document.getElementById('target');
+divTarget.onclick = getTargetClick; // слушатель события клика по блоку
 
-// обновление информации в верхней игровой понели при загрузке страницы
-infoScoresSpan.innerHTML = scores;
-infoTimerSpan.innerHTML = GAME_TIME;
-infoBestResultSpan.innerHTML = bestResult;
+// Всплывающий блок, указывающий число полученных очков, при клике по цели
+const divScores = document.getElementById('scores');
 
-// определение размеров игровой области экрана
-const sidePaddings = 20; /* отступ от края окна и игровой информации (в пикселях) */
-const gameInfoHeight =  Math.ceil( divGameInfo.clientHeight ) + sidePaddings * 2;
-const gameWidth = innerWidth - sidePaddings * 2;
-const gameHeight = innerHeight - gameInfoHeight  - sidePaddings;
+/**************************************
+ * 
+ *  РАСЧЕТ РАЗМЕРОВ ИГРОВОЙ ОБЛАСТИ
+ * 
+ */
 
-// определяем и задаем размеры блоку для кликов
-let targetSide;
-if ( gameHeight < gameWidth ) {
-    targetSide = ( TARGET_BLOCK_SIDE < gameHeight ) ? TARGET_BLOCK_SIDE : gameHeight;
-} else {
-    targetSide = ( TARGET_BLOCK_SIDE < gameWidth ) ? TARGET_BLOCK_SIDE : gameWidth;
-}
-divTarget.style.width = targetSide + 'px';
-divTarget.style.height = targetSide + 'px';
+const sidePaddings = 20; // отступ от края окна и игровой информации (в пикселях)
+// определение высоты верхней панель с информацией о текущей игре с двойным отступом
+const infoHeight =  Math.ceil( divInfo.clientHeight ) + sidePaddings * 2;
+const gameWidth = innerWidth - sidePaddings * 2; // определение доступной ширины
+const gameHeight = innerHeight - infoHeight - sidePaddings; // и высоты
 
 // определение максимального числа блоков для кликов по ширине и высоте игровой облости
-const targetSidesInWidth = Math.floor( gameWidth / targetSide );
-const targetSidesInHeight = Math.floor( gameHeight / targetSide );
+const targetsInWidth = Math.floor( gameWidth / TARGET_SIDE );
+const targetsInHeight = Math.floor( gameHeight / TARGET_SIDE );
 
-// считаем отступы сверху и слева, что бы игровая область была в центре окна
-const gameOffsetX = Math.floor( ( innerWidth - targetSidesInWidth * targetSide ) / 2 );
-const gameOffsetY = Math.floor( ( gameHeight - targetSidesInHeight * targetSide ) / 2 ) + gameInfoHeight;
+// задать размеры игровой области
+divGame.style.width = targetsInWidth * TARGET_SIDE + 'px';
+divGame.style.height = targetsInHeight * TARGET_SIDE + 'px';
 
-// переменные таймеров и интервалов
-let gameTime, timeoutTime, gameInterval;
+// задать размеры блоку для кликов
+divTarget.style.width = TARGET_SIDE + 'px';
+divTarget.style.height = TARGET_SIDE + 'px';
 
-// ФУНКЦИИ
+/*************************
+ * 
+ *  ИГРОВЫЕ ПЕРЕМЕННЫЕ
+ * 
+ */
 
-// получение случайной X и Y координаты
-const getRandomPointX = () => gameOffsetX + Math.floor( Math.random() * targetSidesInWidth ) * targetSide;
-const getRandomPointY = () => gameOffsetY + Math.floor( Math.random() * targetSidesInHeight ) * targetSide;
+let gameTime, // таймер игры (для обратного отсчета секунд)
+    targetReplaceTime, // время для смены позицииблока для кликов
+    targetReplaceInterval; // интервал смены позицииблока для кликов
+
+/*************************
+ * 
+ *  ИГРОВЫЕ ФУНКЦИИ
+ * 
+ */
 
 // старт игры
 function startGame() {
     /* ВАШ КОД */
-    /* скрыть стартовое игровое меню <div id="start-menu"> и изменить свойство display на inline-block для <div id="get-scores"> */
-    divStartMenu.style.display = 'none';
-    divGetScores.style.display = 'inline-block';
+    /* Скрыть стартовое игровое меню <div id="menu">
+    и показать игровую область <div id="game"> (display flex)
+    */
+    divMenu.style.display = 'none';
+    divGame.style.display = 'flex';
     /* ------- */
 
-    scores = 0;
-    scoresSize = START_SCORES;
-    infoScoresSpan.innerHTML = scores;
-    gameTime = GAME_TIME;
-    infoTimerSpan.innerHTML = gameTime;
-    timeoutTime = TARGET_AWAIT_START_TIME * 1000;
+    scoresAdd = START_SCORES;
+    scores = 0; // обнулить набронное ранее число очков
+    infoScores.innerHTML = scores;
+    gameTime = GAME_TIME; // обнулить таймер игры
+    infoTimer.innerHTML = gameTime;
+    // стартовое время смены положения блока для кликов
+    targetReplaceTime = TARGET_REPLACE_TIME * 1000;
+
+    // перемещение блок для кликов в случайное положение
+    replaceTargetDiv();
+
+    // запустить таймер обнавления игрового времени
+    setTimeout( gameTimer, 1000 );
 
     /* ВАШ КОД */
-    /* задать свойство display block для <div id="click-target">; свойствам left и top задать случайные X и Y координаты */
-    divTarget.style.display = 'block';
-    divTarget.style.left = getRandomPointX() + 'px';
-    divTarget.style.top = getRandomPointY() + 'px';
+    /* Запустите интервал смены положения блока для кликов, сохранив его в переменную targetReplaceInterval
+    интервал вызывает функцию перемещающую блок для кликов в случайное положение replaceTargetDiv
+    через заданный временной интервал targetReplaceTime
+    */
+    targetReplaceInterval = setInterval( replaceTargetDiv, targetReplaceTime );
     /* ------- */
-
-    setTimeout( gameClock, 1000 );
-    updateTimeout( timeoutTime );
 }
 
-// обновление интервала
-function updateTimeout( timeOut ) {
+// обновить позицию блока для кликов
+function replaceTargetDiv() {
     /* ВАШ КОД */
-    /* сбросте интервал gameInterval */
-    clearInterval( gameInterval );
+    /* задайте блоку <div id="target"> CSS-свойства left и top
+    left - случайное число от 0 до targetsInWidth (число блоков по ширине игровой области), умноженного на TARGET_SIDE
+    top - случайное число от 0 до targetsInHeight (число блоков по высоте игровой области), умноженного на TARGET_SIDE 
+    */
+    divTarget.style.left = Math.floor( Math.random() * targetsInWidth ) * TARGET_SIDE + 'px';
+    divTarget.style.top = Math.floor( Math.random() * targetsInHeight ) * TARGET_SIDE + 'px';
     /* ------- */
-
-    gameInterval = setInterval( () => {
-        /* ВАШ КОД */
-        /* задать свойство display block для <div id="click-target">; свойствам left и top задать случайные X и Y координаты */
-        divTarget.style.left = getRandomPointX() + 'px';
-        divTarget.style.top = getRandomPointY() + 'px';
-        /* ------- */
-    }, timeOut );
 }
 
 // клик по целе
 function getTargetClick() {
+    targetReplaceTime = Math.floor(targetReplaceTime / TARGET_REPLACE_TIME_RANGE);
+
     /* ВАШ КОД */
-    /* задать свойство display block для <div id="click-target">; свойствам left и top задать случайные X и Y координаты */
-    divTarget.style.left = getRandomPointX() + 'px';
-    divTarget.style.top = getRandomPointY() + 'px';
+    /* 
+    Обновите позицию блока для кликов.
+    Очистите интервал смены положения блока для кликов (хранится в переменной targetReplaceInterval),
+    что бы обновить время автоматической смены положения блока, после клика по нему. 
+    После этого запустите интервал занова (сохранив его в переменную targetReplaceInterval)
+    интервал вызывает функцию перемещающую блок для кликов в случайное положение replaceTargetDiv
+    через заданный временной интервал targetReplaceTime
+    */
+    replaceTargetDiv();
+    clearInterval( targetReplaceInterval );
+    targetReplaceInterval = setInterval( replaceTargetDiv, targetReplaceTime );
     /* ------- */
 
-    timeoutTime = timeoutTime / TARGET_AWAIT_RANGE;
-    updateTimeout( timeoutTime );
+    // обновление набранных очков
+    scores += scoresAdd;
+    infoScores.innerHTML = scores;
 
-    scores += scoresSize;
-    infoScoresSpan.innerHTML = scores;
+    // показать набронное число очков за клик
+    divScores.innerHTML = '+' + scoresAdd;
+    divScores.classList.remove('show');
+    // добавляем класс 'show' через ivent loop,
+    // что бы браузер успел сначало удалить класс 'show'
+    // а добавил его только после удаления
+    // (появление класса 'show' запускает CSS-анимацию)
+    setTimeout( () => divScores.classList.add('show'), 0 );
 
-    divGetScoresSpan.innerHTML = scoresSize;
-    divGetScores.classList.remove('show');
-    setTimeout( () => divGetScores.classList.add('show'), 0 );
-    scoresSize = Math.round( scoresSize * SCORES_RANGE );
+    scoresAdd = Math.floor(scoresAdd * SCORES_ADD_RANGE);
 }
 
 // обновление игрового таймера
-function gameClock() {
+function gameTimer() {
     gameTime--;
-
-    /* ВАШ КОД */
-    /* обновите данные в игровом таймере <div id="info-timer"> */
-    infoTimerSpan.innerHTML = gameTime;
-    /* ------- */
-
-    if (gameTime > 0) setTimeout( gameClock, 1000 );
+    infoTimer.innerText = gameTime;
+    // проверкая завершения игрового времени
+    if (gameTime > 0) setTimeout( gameTimer, 1000 );
     else gameEnd();
 }
 
 // завершение игры
 function gameEnd() {
-    /* ВАШ КОД */
-    /* сбросте интервал gameInterval */
-    clearInterval( gameInterval );
-    /* ------- */
-
-    /* ВАШ КОД */
-    /* задать свойство display none для <div id="click-target"> */
     divTarget.style.display = 'none';
-    /* ------- */
+    clearInterval( targetReplaceInterval );
 
-    if (scores > bestResult) bestResult = scores;
-
-    /* ВАШ КОД */
-    /* обновите данные об игре в тегах <div id="info-timer">, <div id="info-best-result">,
-    а также в тексте рекорда стартового игрового меню <div id="start-menu"><h2>РЕКОРД: <span></span></h2></div>*/
-    infoTimerSpan.innerHTML = gameTime;
-    infoBestResultSpan.innerHTML = bestResult;
-    bestScoreStartMenuSpan.innerHTML = bestResult;
-    /* ------- */
+    // обновляем рекорд, если он побит
+    if (scores > bestResult) {
+        bestResult = scores;
+        infoBest.innerHTML = bestResult;
+        menuBest.innerHTML = bestResult;
+    }
 
     setTimeout( () => {
-        /* ВАШ КОД */
-        /* для блока <div id="get-scores"> удалить класс show и скрыть блок;
-        показать стартовое игровое меню <div id="start-menu"> (display block) */
-        divGetScores.classList.remove('show');
-        divGetScores.style.display = 'none';
-        divStartMenu.style.display = 'block';
-        /* ------- */
+        divMenu.style.display = 'block';
+        divGame.style.display = 'none';
+        divTarget.style.display = 'block';
+        divScores.innerHTML = '';
     }, 1500 );
 }
