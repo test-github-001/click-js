@@ -37,7 +37,7 @@ body {
     user-select: none;
 }
 
-#game-info {
+#info {
     position: absolute;
     top: 0;
     left: 0;
@@ -48,7 +48,7 @@ body {
     justify-content: space-between;
 }
 
-#start-menu {
+#menu {
     max-width: 320px;
     margin: 30px;
     border: 2px solid #000000;
@@ -70,8 +70,15 @@ span {
     font-weight: bold;
 }
 
-#click-target {
+#game {
+    position: relative;
     display: none;
+    flex-wrap: wrap;
+    align-content: center;
+    justify-content: center;
+}
+
+#target {
     position: absolute;
     border-radius: 12%;
     box-shadow: 1px 2px 5px 3px #ffffff;
@@ -80,18 +87,18 @@ span {
     background-size: cover;
 }
 
-#get-scores {
+#scores {
+    text-align: center;
     font-weight: bold;
-    font-size: 120px;
-    display: none;
+    font-size: 240px;
     color: #8b009800;
 }
 
-#get-scores.show {
-    animation: get-scores 1s linear;
+#scores.show {
+    animation: get-scores 1.5s linear;
 }
 
 @keyframes get-scores {
-      0% { color: #8b0098ff; transform: scale(2); }
-    100% { color: #8b009800; transform: scale(1); }
+      0% { color: #8b0098ff; transform: scale(1); }
+    100% { color: #8b009800; transform: scale(0.5); }
 }
